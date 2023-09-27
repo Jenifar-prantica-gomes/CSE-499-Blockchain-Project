@@ -1,0 +1,182 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cse499_project/Farmer/AddCrops_Verifiction/ADD_CROPS/Add_Crop.dart';
+import 'package:cse499_project/Farmer/OTP/Model%20of%20sing/model%20sing.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+
+class Farmar_sing_up extends StatefulWidget {
+  const Farmar_sing_up({Key? key}) : super(key: key);
+
+  @override
+  State<Farmar_sing_up> createState() => _Farmar_sing_upState();
+}
+
+class _Farmar_sing_upState extends State<Farmar_sing_up> {
+  final _auth = FirebaseAuth.instance;
+  String? errorMessage;
+  final _formkey = GlobalKey<FormState>();
+  final EmailControllerFarmarSign = TextEditingController();
+  final UsernameControllerFarmarSign = TextEditingController();
+  final PasswordControllerFarmarSign = TextEditingController();
+  final RePasswordControllerFarmarSign = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Form(
+        key: _formkey,
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Farmer Sign',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 24.0,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              TextFormField(
+                autofocus: false,
+                controller: EmailControllerFarmarSign,
+                keyboardType: TextInputType.emailAddress,
+                validator: (value) {
+                  if (value!.isEmpty) {
+                    return "Enter your Email";
+                  }
+                  if (!RegExp("^[a-zA-Z0-9+_.-]+@[a-zA-Z0-9.-]+.[a-z]")
+                      .hasMatch(value)) {
+                    return "Enter a valid email";
+                  }
+                  return null;
+                },
+                onSaved: (value) {
+                  EmailControllerFarmarSign.text = value!;
+                },
+                textInputAction: TextInputAction.next,
+                decoration: InputDecoration(
+                  labelText: 'Email',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              SizedBox(height: 16.0),
+              TextFormField(
+                autofocus: false,
+                controller: UsernameControllerFarmarSign,
+                keyboardType: TextInputType.name,
+                validator: (value) {
+                  RegExp regex = new RegExp(r'^.{3,}$');
+                  if (value!.isEmpty) {
+                    return "useername can not be empty";
+                  }
+                  if (!regex.hasMatch(value)) {
+                    return "Enter Valid name(Min. 3 Character)";
+                  }
+                  return null;
+                },
+                onSaved: (value) {
+                  UsernameControllerFarmarSign.text = value!;
+                },
+                textInputAction: TextInputAction.next,
+                decoration: InputDecoration(
+                  labelText: 'username',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              SizedBox(height: 16.0),
+              TextFormField(
+                obscureText: true,
+                controller: PasswordControllerFarmarSign,
+                validator: (value) {
+                  RegExp regex = new RegExp(r'^.{6,}$');
+                  if (value!.isEmpty) {
+                    return ("Password is required for login");
+                  }
+                  if (!regex.hasMatch(value)) {
+                    return ("Enter Valid Password(Min. 6 Character)");
+                  }
+                },
+                onSaved: (value) {
+                  PasswordControllerFarmarSign.text = value!;
+                },
+                textInputAction: TextInputAction.next,
+                decoration: InputDecoration(
+                  hintText: 'Password',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              SizedBox(height: 16.0),
+              TextFormField(
+                autofocus: false,
+                obscureText: true,
+                controller: RePasswordControllerFarmarSign,
+                validator: (value) {
+                  if (RePasswordControllerFarmarSign.text !=
+                      PasswordControllerFarmarSign.text) {
+                    return "Password don't match";
+                  }
+                  return null;
+                },
+                onSaved: (value) {
+                  RePasswordControllerFarmarSign.text = value!;
+                },
+                textInputAction: TextInputAction.done,
+                decoration: InputDecoration(
+                  hintText: 'Re-Password',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              SizedBox(height: 32.0),
+              ElevatedButton(
+                onPressed: () {
+                  singUp(EmailControllerFarmarSign.text,
+                      PasswordControllerFarmarSign.text);
+                },
+                child: Text('Sing In'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void singUp(String email, String password) async {
+    if (_formkey.currentState!.validate()) {
+      await _auth
+          .createUserWithEmailAndPassword(email: email, password: password)
+          .then((value) => {postDetailsToFirestore()})
+          .catchError((e) {
+        Fluttertoast.showToast(msg: e!.message);
+      });
+    }
+  }
+
+  postDetailsToFirestore() async {
+    //calling firestore
+    //calling userModel
+    //sending this value
+    FirebaseFirestore firebaseFirestore = FirebaseFirestore.instance;
+    User? user = _auth.currentUser;
+    Farmer_UserModel userModel = Farmer_UserModel();
+    //writing all the value
+    userModel.email = user!.email;
+    userModel.userName = UsernameControllerFarmarSign.text;
+    userModel.uid = user.uid;
+
+    await firebaseFirestore
+        .collection("users")
+        .doc(user.uid)
+        .set(userModel.toMap());
+    Fluttertoast.showToast(msg: "...Account created successfully...");
+
+    Navigator.pushAndRemoveUntil(
+        (context),
+        MaterialPageRoute(builder: (context) => Farmer_AddCrops()),
+        (route) => false);
+  }
+}
